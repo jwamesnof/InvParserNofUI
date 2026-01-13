@@ -72,7 +72,7 @@ The frontend should focus on:
 
 ### 3. Upload Invoice Page (/upload)
 - Drag-and-drop file upload
-- Validate file types (PDF, images)
+- Validate file types (PDF)
 - Upload progress indicator
 - Loading spinner during extraction
 - Clear success and error notifications
