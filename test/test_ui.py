@@ -23,10 +23,10 @@ class TestInvParserUI(unittest.TestCase):
     
     def test_page_title(self):
         """Test that the page title is correct."""
-        self.page.goto("http://localhost:3003")
+        self.page.goto("http://localhost:3004")
         title = self.page.title()
         self.assertIn("InvParser", title)
-        print(f"Page title is: {title}")
+        
 
 
 if __name__ == "__main__":
