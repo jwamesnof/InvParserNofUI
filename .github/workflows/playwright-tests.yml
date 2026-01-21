@@ -24,9 +24,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-            fetch-depth: 1  # Fetch only the latest commit to speed up the checkout process
-            repository: jwamesnof/InvParserNofUI  # Replace with your UI testing repo
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -37,11 +34,15 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r test/requirements.txt
 
       - name: Install Playwright browsers
         run: |
-          python -m playwright install --with-deps ${{ matrix.browser }}
+          BROWSER_NAME=${{ matrix.browser }}
+          if [ "$BROWSER_NAME" = "chrome" ]; then
+            BROWSER_NAME="chromium"
+          fi
+          python -m playwright install --with-deps $BROWSER_NAME
 
       - name: Run Playwright tests
         env:
@@ -52,7 +53,10 @@ jobs:
           APP_URL: https://uncorpulently-subovate-emil.ngrok-free.dev
           TEST_NAME: ${{ matrix.browser }}-${{ matrix.resolution.name }}
         run: |
-          pytest test/ -v
+          cd test
+          python test_ui.py
+          python test_user_journey.py
+          python components/test_upload_component.py
 
       - name: Archive test screenshots
         if: always()
