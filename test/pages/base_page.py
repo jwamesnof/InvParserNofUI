@@ -2,6 +2,7 @@
 Base Page Object class with common functionality.
 """
 
+import os
 from playwright.sync_api import Page, expect
 
 
@@ -10,6 +11,7 @@ class BasePage:
     
     def __init__(self, page: Page):
         self.page = page
+        self.base_url = os.getenv('APP_URL', 'http://localhost:3000')
         self._verify_page_loaded()
     
     def _verify_page_loaded(self):
@@ -18,8 +20,7 @@ class BasePage:
     
     def goto(self, path: str):
         """Navigate to a specific path."""
-        base_url = "http://localhost:3000"
-        self.page.goto(f"{base_url}{path}")
+        self.page.goto(f"{self.base_url}{path}")
     
     def get_title(self):
         """Get the page title."""
