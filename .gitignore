@@ -11,3 +11,5 @@ node_modules
 
 .auth
 
+__pycache__
+test_user_journey.cpython-314-pytest-9.0.2
