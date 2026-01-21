@@ -26,7 +26,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 1
-        repository: your-username/InvParserUI  # Replace with your UI testing repo
+        repository: jwamesnof/InvParserNofUI 
       
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -41,15 +41,16 @@ jobs:
     - name: Install Playwright browsers
       run: |
         playwright install --with-deps ${{ matrix.browser }}
-    
+
     - name: Archive test screenshots
       if: always()  # Run this step even if tests fail
       uses: actions/upload-artifact@v4
       with:
         name: test-screenshots
         path: |
-          *.png 
-
+          *.png
+          
+        
     - name: Run Playwright tests
       env:
         HEADLESS: true
