@@ -38,12 +38,20 @@ class TestInvParserUI(unittest.TestCase):
     def test_page_title(self):
         """Test that the page title is correct."""
         self.page.goto(self.app_url)
+        # Handle ngrok warning page
+        self.factory.handle_ngrok_warning(self.page)
+        # Wait for page to load
+        self.page.wait_for_load_state("networkidle", timeout=10000)
         title = self.page.title()
         self.assertIn("InvParser", title)
     
     def test_login_page_loads(self):
         """Test that the login page loads correctly."""
         self.page.goto(f"{self.app_url}/login")
+        # Handle ngrok warning page
+        self.factory.handle_ngrok_warning(self.page)
+        # Wait for page to load
+        self.page.wait_for_load_state("networkidle", timeout=10000)
         login_page = LoginPage(self.page)
         
         # Page object initialization verifies page loaded
