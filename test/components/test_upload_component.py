@@ -1,10 +1,22 @@
 import os
 import re
+import sys
 import unittest
 from playwright.sync_api import sync_playwright, expect
 
+# Add parent directory to path to import pages
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from pages import LoginPage, UploadPage
+
+# Get project root directory (two levels up from test/components)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
 
 class TestUploadInvoiceComponent(unittest.TestCase):
+    """
+    Test upload component functionality using Page Object Model.
+    Tests various upload scenarios including errors and edge cases.
+    """
 
     AUTH_FILE = "playwright/.auth/user.json"
     UPLOAD_URL = "http://localhost:3000/upload"
@@ -21,19 +33,15 @@ class TestUploadInvoiceComponent(unittest.TestCase):
 
     @classmethod
     def _perform_authentication(cls):
+        """Perform authentication and save state using page objects."""
         context = cls.browser.new_context()
         page = context.new_page()
 
         page.goto("http://localhost:3000/login")
-        page.locator("input[type='text']").fill("admin")
-        page.locator("input[type='password']").fill("admin")
-
-        page.get_by_role(
-            "button",
-            name=re.compile("sign in", re.I)
-        ).click()
-
-        page.wait_for_url("**/dashboard")
+        login_page = LoginPage(page)
+        
+        # Login and wait for dashboard
+        login_page.login_and_wait_for_dashboard("admin", "admin")
 
         context.storage_state(path=cls.AUTH_FILE)
         context.close()
@@ -49,86 +57,69 @@ class TestUploadInvoiceComponent(unittest.TestCase):
         )
         self.page = self.context.new_page()
         self.page.goto(self.UPLOAD_URL)
+        self.upload_page = UploadPage(self.page)
 
     def tearDown(self):
         self.context.close()
 
     # 1️⃣ Upload page renders correctly
     def test_upload_form_rendered(self):
-            expect(
-                self.page.get_by_role("heading", name=re.compile("^Upload Invoice$"))
-            ).to_be_visible()
+        """Test that upload form elements are rendered correctly."""
+        self.assertTrue(
+            self.upload_page.is_heading_visible(),
+            "Upload Invoice heading should be visible"
+        )
 
-            expect(
-                self.page.get_by_text(re.compile("PDF files only", re.I))
-            ).to_be_visible()
+        self.assertTrue(
+            self.upload_page.is_pdf_only_text_visible(),
+            "PDF files only text should be visible"
+        )
 
     # 2️⃣ Upload without selecting a file → stays on page
     def test_upload_without_file(self):
-        expect(self.page).to_have_url(
-            re.compile(r"/upload")
-        )
+        """Test that page stays on upload when no file is selected."""
+        expect(self.page).to_have_url(re.compile(r"/upload"))
 
     # 3️⃣ Invalid file type (TXT)
     def test_invalid_file_type(self):
-        self.page.set_input_files(
-            'input[type="file"]',
-            "sample_invoices/invalid.txt"
-        )
-
-        error = self.page.get_by_text(
-            "Invalid file type. Only PDF files are supported",
-            exact=False
-        )
-
-        expect(error).to_be_visible(timeout=10000)
+        """Test that invalid file type shows appropriate error."""
+        invalid_file = os.path.join(PROJECT_ROOT, "sample_invoices", "invalid.txt")
+        self.upload_page.upload_file(invalid_file)
+        self.upload_page.expect_invalid_file_error()
 
     # 4️⃣ Corrupted PDF
     def test_corrupted_pdf(self):
-        self.page.set_input_files(
-            'input[type="file"]',
-            "sample_invoices/corrupted_invoice.pdf"
-        )
-
-        expect(
-            self.page.get_by_text(re.compile("failed|error|corrupt", re.I))
-        ).to_be_visible(timeout=10_000)
+        """Test that corrupted PDF shows appropriate error."""
+        corrupted_file = os.path.join(PROJECT_ROOT, "sample_invoices", "corrupted_invoice.pdf")
+        self.upload_page.upload_file(corrupted_file)
+        self.upload_page.expect_failed_error()
 
     # 5️⃣ Backend failure (API abort simulation)
-
     def test_backend_failure(self):
-        self.page.route(
-            re.compile(r".*/extract"),
-            lambda route: route.fulfill(status=500)
-        )
+        """Test that backend failure is handled gracefully."""
+        # Mock backend failure
+        self.upload_page.mock_backend_failure()
 
-        self.page.set_input_files(
-            'input[type="file"]',
-            "sample_invoices/invoice_Aaron_Bergman_36259.pdf"
-        )
+        # Upload file
+        valid_pdf = os.path.join(PROJECT_ROOT, "sample_invoices", "invoice_Aaron_Bergman_36259.pdf")
+        self.upload_page.upload_file(valid_pdf)
 
-        # Do NOT click "Browse Files"
-        # Upload is triggered automatically after file selection
-
-        expect(self.page).to_have_url(
-            re.compile(r"/upload"),
-            timeout=10_000
-        )
-
+        # Verify stays on upload page
+        self.upload_page.expect_stays_on_upload_page()
 
     # 6️⃣ Successful upload → redirect to invoice details
     def test_successful_upload_redirect(self):
-        valid_pdf = os.path.abspath(
-            "sample_invoices/invoice_Aaron_Bergman_36259.pdf"
-        )
+        """Test that successful upload redirects to invoice details page."""
+        valid_pdf = os.path.join(PROJECT_ROOT, "sample_invoices", "invoice_Aaron_Bergman_36259.pdf")
 
-        self.page.set_input_files(
-            "input[type='file']",
-            valid_pdf
-        )
-
-        expect(self.page).to_have_url(
-            re.compile(r"/invoice/\d+"),
+        invoice_page = self.upload_page.upload_and_wait_for_invoice(
+            valid_pdf,
             timeout=30000
         )
+        
+        # Verify we're on invoice page
+        invoice_page.verify_invoice_url_pattern()
 
+
+if __name__ == "__main__":
+    unittest.main()
