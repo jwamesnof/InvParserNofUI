@@ -1,0 +1,63 @@
+# .github/workflows/ui-testing.yaml
+name: Playwright UI Tests
+
+on:
+  pull_request:
+    branches:
+     - main
+
+jobs:
+  playwright-matrix-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        browser: [chrome, firefox]
+        resolution: 
+          - { name: 'desktop', width: 1920, height: 1080 }
+          - { name: 'tablet', width: 768, height: 1024 }
+          - { name: 'mobile', width: 375, height: 667 }
+      fail-fast: false  # Continue other jobs even if one fails
+    
+    name: Test ${{ matrix.browser }} - ${{ matrix.resolution.name }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        repository: your-username/InvParserUI  # Replace with your UI testing repo
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Install Playwright browsers
+      run: |
+        playwright install --with-deps ${{ matrix.browser }}
+    
+    - name: Archive test screenshots
+      if: always()  # Run this step even if tests fail
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-screenshots
+        path: |
+          *.png 
+
+    - name: Run Playwright tests
+      env:
+        HEADLESS: true
+        BROWSER: ${{ matrix.browser }}
+        SCREEN_WIDTH: ${{ matrix.resolution.width }}
+        SCREEN_HEIGHT: ${{ matrix.resolution.height }}
+        APP_URL: http://NGROK_URL:3000
+        TEST_NAME: ${{ matrix.browser }}-${{ matrix.resolution.name }}
+      run: |
+        pytest tests/ -v --tb=short
+        
