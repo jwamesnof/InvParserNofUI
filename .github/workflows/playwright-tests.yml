@@ -1,0 +1,70 @@
+# .github/workflows/ui-testing.yaml
+name: Playwright UI Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  playwright-matrix-tests:
+    runs-on: ubuntu-22.04   # ✅ FIX 1: pin OS
+
+    strategy:
+      matrix:
+        browser: [chrome, firefox]
+        resolution:
+          - { name: 'desktop', width: 1920, height: 1080 }
+          - { name: 'tablet', width: 768, height: 1024 }
+          - { name: 'mobile', width: 375, height: 667 }
+      fail-fast: false
+
+    name: Test ${{ matrix.browser }} - ${{ matrix.resolution.name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r test/requirements.txt
+
+      - name: Install Playwright browsers
+        run: |
+          BROWSER_NAME=${{ matrix.browser }}
+          if [ "$BROWSER_NAME" = "chrome" ]; then
+            BROWSER_NAME="chromium"
+          fi
+          python -m playwright install --with-deps $BROWSER_NAME
+
+      - name: Run Playwright tests
+        env:
+          HEADLESS: true
+          BROWSER: ${{ matrix.browser }}
+          SCREEN_WIDTH: ${{ matrix.resolution.width }}
+          SCREEN_HEIGHT: ${{ matrix.resolution.height }}
+          APP_URL: https://uncorpulently-subovate-emil.ngrok-free.dev
+          TEST_NAME: ${{ matrix.browser }}-${{ matrix.resolution.name }}
+        run: |
+          cd test
+          python test_ui.py
+          python test_user_journey.py
+          python components/test_upload_component.py
+
+      - name: Archive test screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots-${{ matrix.browser }}-${{ matrix.resolution.name }}
+          path: |
+            test/*.png
+            test/**/*.png
+
+    

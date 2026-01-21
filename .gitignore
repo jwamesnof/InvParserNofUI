@@ -9,3 +9,9 @@ node_modules
 .DS_Store
 .venv/
 
+.auth
+
+__pycache__
+test_user_journey.cpython-314-pytest-9.0.2
+test_upload_component.cpython-314-pytest-9.0.2
+test_user_journey.cpython-314-pytest-9.0.2

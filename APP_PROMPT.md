@@ -13,7 +13,7 @@ Treat this project as a real SaaS-style product and a portfolio-level applicatio
 ## API Endpoint
 
 The backend API is available at:
-http://localhost:8082
+http://localhost:8080
 
 The API is responsible for processing invoices, extracting structured data, and storing invoice records.
 The frontend should focus on:
