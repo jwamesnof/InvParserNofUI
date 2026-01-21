@@ -49,7 +49,7 @@ jobs:
         name: test-screenshots
         path: |
           *.png
-          
+
         
     - name: Run Playwright tests
       env:
@@ -57,8 +57,8 @@ jobs:
         BROWSER: ${{ matrix.browser }}
         SCREEN_WIDTH: ${{ matrix.resolution.width }}
         SCREEN_HEIGHT: ${{ matrix.resolution.height }}
-        APP_URL: http://NGROK_URL:3000
+        APP_URL: https://uncorpulently-subovate-emil.ngrok-free.dev
         TEST_NAME: ${{ matrix.browser }}-${{ matrix.resolution.name }}
       run: |
-        pytest tests/ -v --tb=short
+        pytest test/ -v --tb=short
         
