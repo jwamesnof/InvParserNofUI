@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        browser: [chromium, firefox]   # ✅ FIX 2: valid Playwright browsers
+        browser: [chrome, firefox]
         resolution:
           - { name: 'desktop', width: 1920, height: 1080 }
           - { name: 'tablet', width: 768, height: 1024 }
@@ -39,10 +39,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ✅ FIX 3: install Playwright + system deps correctly
       - name: Install Playwright browsers
         run: |
-          playwright install --with-deps
+          python -m playwright install --with-deps ${{ matrix.browser }}
 
       - name: Run Playwright tests
         env:
