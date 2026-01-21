@@ -43,7 +43,7 @@ class TestInvParserUI(unittest.TestCase):
         # Wait for page to load
         self.page.wait_for_load_state("networkidle", timeout=10000)
         title = self.page.title()
-        self.assertIn("InvParser", title)
+        self.assertEqual("InvParser - Invoice Management", title)
     
     def test_login_page_loads(self):
         """Test that the login page loads correctly."""
