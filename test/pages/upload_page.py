@@ -72,6 +72,8 @@ class UploadPage(BasePage):
     def expect_invalid_file_error(self, timeout=10000):
         """Wait for and verify invalid file type error is visible."""
         error = self.page.get_by_text(self.INVALID_FILE_ERROR, exact=False)
+        # Scroll to the element to ensure it's in viewport (important for mobile)
+        error.scroll_into_view_if_needed()
         expect(error).to_be_visible(timeout=timeout)
         return self
     
