@@ -129,11 +129,26 @@ class BrowserFactory:
         Ngrok shows a warning page before allowing access to the tunneled site.
         """
         try:
-            # Wait briefly for ngrok warning page
-            visit_button = page.get_by_role("button", name="Visit Site")
-            if visit_button.is_visible(timeout=2000):
-                visit_button.click()
-                page.wait_for_load_state("networkidle", timeout=5000)
+            # Check if we're on the ngrok warning page by title
+            title = page.title()
+            if 'ngrok' in title.lower() or 'ERR_NGROK' in title:
+                # Try to find and click the visit button
+                # Ngrok uses different button texts, try multiple selectors
+                selectors = [
+                    "button:has-text('Visit Site')",
+                    "button:has-text('Continue')",
+                    "a:has-text('click here')",
+                    "button[type='submit']"
+                ]
+                for selector in selectors:
+                    try:
+                        element = page.locator(selector).first
+                        if element.is_visible(timeout=2000):
+                            element.click()
+                            page.wait_for_load_state("networkidle", timeout=10000)
+                            break
+                    except:
+                        continue
         except:
             pass  # No ngrok warning page or already dismissed
     
