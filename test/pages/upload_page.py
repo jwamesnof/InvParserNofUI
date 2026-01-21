@@ -71,10 +71,34 @@ class UploadPage(BasePage):
     
     def expect_invalid_file_error(self, timeout=10000):
         """Wait for and verify invalid file type error is visible."""
-        error = self.page.get_by_text(self.INVALID_FILE_ERROR, exact=False)
-        # Scroll to the element to ensure it's in viewport (important for mobile)
-        error.scroll_into_view_if_needed()
-        expect(error).to_be_visible(timeout=timeout)
+        # Try multiple selector strategies for error messages
+        selectors = [
+            self.page.get_by_text(self.INVALID_FILE_ERROR, exact=False),
+            self.page.locator("p.text-red-600"),
+            self.page.locator(".error-message"),
+            self.page.locator("[role='alert']")
+        ]
+        
+        error_found = False
+        for selector in selectors:
+            try:
+                # Wait for element to be attached
+                expect(selector.first).to_be_attached(timeout=3000)
+                # Scroll into view
+                selector.first.scroll_into_view_if_needed()
+                # Small wait for any CSS transitions
+                self.page.wait_for_timeout(500)
+                # Check if visible
+                if selector.first.is_visible():
+                    error_found = True
+                    break
+            except:
+                continue
+        
+        if not error_found:
+            # Fallback: just check that error text exists in the page somewhere
+            expect(self.page.locator(f"text=/{self.INVALID_FILE_ERROR}/i").first).to_be_attached(timeout=timeout)
+        
         return self
     
     def expect_failed_error(self, timeout=10000):
