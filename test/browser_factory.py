@@ -128,29 +128,66 @@ class BrowserFactory:
         Handle Ngrok warning page if present.
         Ngrok shows a warning page before allowing access to the tunneled site.
         """
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                # Check if we're on the ngrok warning page by title or URL
+                title = page.title()
+                url = page.url
+                
+                if 'ngrok' in title.lower() or 'ERR_NGROK' in title or 'ngrok-free' in url:
+                    # Wait a bit for the page to fully load
+                    page.wait_for_timeout(1000)
+                    
+                    # Try to find and click the visit button using multiple strategies
+                    clicked = False
+                    
+                    # Strategy 1: Try common button texts
+                    button_texts = ['Visit Site', 'Continue', 'click here']
+                    for text in button_texts:
+                        try:
+                            button = page.get_by_text(text, exact=False)
+                            if button.is_visible(timeout=3000):
+                                button.click()
+                                clicked = True
+                                break
+                        except:
+                            continue
+                    
+                    # Strategy 2: Try any button or link on the page
+                    if not clicked:
+                        try:
+                            buttons = page.locator("button, a[href], input[type='submit']")
+                            count = buttons.count()
+                            for i in range(count):
+                                try:
+                                    buttons.nth(i).click(timeout=2000)
+                                    clicked = True
+                                    break
+                                except:
+                                    continue
+                        except:
+                            pass
+                    
+                    if clicked:
+                        # Wait for navigation after clicking
+                        page.wait_for_load_state("networkidle", timeout=15000)
+                        page.wait_for_timeout(1000)
+                        
+                        # Check if we successfully left the ngrok warning page
+                        new_title = page.title()
+                        if 'ngrok' not in new_title.lower() and 'ERR_NGROK' not in new_title:
+                            break  # Successfully dismissed
+                else:
+                    break  # Not on ngrok page
+            except:
+                pass
+        
+        # Final wait to ensure page is ready
         try:
-            # Check if we're on the ngrok warning page by title
-            title = page.title()
-            if 'ngrok' in title.lower() or 'ERR_NGROK' in title:
-                # Try to find and click the visit button
-                # Ngrok uses different button texts, try multiple selectors
-                selectors = [
-                    "button:has-text('Visit Site')",
-                    "button:has-text('Continue')",
-                    "a:has-text('click here')",
-                    "button[type='submit']"
-                ]
-                for selector in selectors:
-                    try:
-                        element = page.locator(selector).first
-                        if element.is_visible(timeout=2000):
-                            element.click()
-                            page.wait_for_load_state("networkidle", timeout=10000)
-                            break
-                    except:
-                        continue
+            page.wait_for_load_state("domcontentloaded", timeout=5000)
         except:
-            pass  # No ngrok warning page or already dismissed
+            pass
     
     def close(self):
         """Close browser and playwright."""
