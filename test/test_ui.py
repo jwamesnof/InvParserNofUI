@@ -1,11 +1,11 @@
 import unittest
 import sys
 import os
-from playwright.sync_api import sync_playwright
 
 # Add test directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pages import LoginPage, DashboardPage
+from browser_factory import BrowserFactory
 
 
 class TestInvParserUI(unittest.TestCase):
@@ -14,32 +14,36 @@ class TestInvParserUI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up the browser once for all tests in this class."""
-        cls.playwright = sync_playwright().start()
-        cls.browser = cls.playwright.chromium.launch(headless=False)
+        cls.factory = BrowserFactory()
+        cls.factory.create_browser()
+        cls.app_url = cls.factory.app_url
     
     @classmethod
     def tearDownClass(cls):
         """Clean up after all tests are done."""
-        cls.browser.close()
-        cls.playwright.stop()
+        cls.factory.close()
 
     def setUp(self):
         """Set up before each test method."""
-        self.page = self.browser.new_page()
+        self.page = self.factory.create_page()
+        self.factory.handle_ngrok_warning(self.page)
     
     def tearDown(self):
         """Clean up after each test method."""
+        if hasattr(self, '_outcome') and not self._outcome.success:
+            test_name = self.id().split('.')[-1]
+            self.page.screenshot(path=f'test_failure_{test_name}.png')
         self.page.close()
     
     def test_page_title(self):
         """Test that the page title is correct."""
-        self.page.goto("http://localhost:3000")
+        self.page.goto(self.app_url)
         title = self.page.title()
         self.assertIn("InvParser", title)
     
     def test_login_page_loads(self):
         """Test that the login page loads correctly."""
-        self.page.goto("http://localhost:3000/login")
+        self.page.goto(f"{self.app_url}/login")
         login_page = LoginPage(self.page)
         
         # Page object initialization verifies page loaded

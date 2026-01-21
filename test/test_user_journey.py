@@ -2,11 +2,12 @@ import unittest
 import os
 import sys
 import re
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import expect
 
 # Add test directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pages import LoginPage, DashboardPage, UploadPage, InvoicePage
+from browser_factory import BrowserFactory
 
 # Get project root directory (one level up from test)
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -20,27 +21,30 @@ class TestUserJourney(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.playwright = sync_playwright().start()
-        cls.browser = cls.playwright.chromium.launch(
-            headless=False,
-            slow_mo=500
-        )
+        cls.factory = BrowserFactory()
+        cls.factory.create_browser()
+        cls.app_url = cls.factory.app_url
 
     @classmethod
     def tearDownClass(cls):
-        cls.browser.close()
-        cls.playwright.stop()
+        cls.factory.close()
 
     def setUp(self):
-        self.page = self.browser.new_page()
+        self.page = self.factory.create_page()
+        # Handle ngrok warning if present
+        self.factory.handle_ngrok_warning(self.page)
 
     def tearDown(self):
+        # Take screenshot on failure
+        if hasattr(self, '_outcome') and not self._outcome.success:
+            test_name = self.id().split('.')[-1]
+            self.page.screenshot(path=f'test_failure_{test_name}.png')
         self.page.close()
 
     def test_login_and_upload_invoice(self):
         """Test complete user journey: login → navigate to upload → upload file."""
         # Navigate to login page
-        self.page.goto("http://localhost:3000/login")
+        self.page.goto(f"{self.app_url}/login")
         login_page = LoginPage(self.page)
 
         # Login and verify dashboard
@@ -63,7 +67,7 @@ class TestUserJourney(unittest.TestCase):
         Test user journey using method chaining for fluent interface.
         Demonstrates the page chaining pattern from the POM guide.
         """
-        self.page.goto("http://localhost:3000/login")
+        self.page.goto(f"{self.app_url}/login")
         
         # Page chaining: login → dashboard → upload → invoice
         pdf_path = os.path.join(PROJECT_ROOT, "sample_invoices", "invoice_Aaron_Bergman_36259.pdf")
